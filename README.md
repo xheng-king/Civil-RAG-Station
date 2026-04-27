@@ -77,7 +77,17 @@ EMBEDDING_MODEL=Qwen3-Embedding-0.6B
 - Rerank 模型若无本地可用服务，可留空 `RERANK_API_KEY`，系统会自动降级为向量距离排序。
 - 确保模型名称与部署时的名称完全一致。
 
-### 4. 启动后端服务
+### 4.（可选）构建初始数据库
+
+本系统提供初始数据库，包含GB50010混凝土结构设计规范、GB50011建筑抗震设计规范、GB50017钢结构设计标准三本规范的数据库集合
+
+如需此初始集合，请在项目根目录运行以下命令：
+
+```
+python -m scripts.build_initial_set
+```
+
+### 5. 启动后端服务
 
 在项目根目录执行：
 
@@ -87,16 +97,6 @@ python -m backend.main
 
 后端将运行在 `.env` 中 `PORT` 指定的端口（默认 8080）。  
 访问 `http://localhost:8080` (或你的服务器的公网IP+端口号）即可看到前端界面。
-
-### 5. 使用系统
-
-- **左侧栏**：
-  - 刷新集合列表 → 选择/新建集合
-  - 上传文档（支持多选 `.md` / `.txt`），可调整分块大小
-- **右侧问答区**：
-  - 开启“自适应检索”可提高答案准确率（会增加耗时）
-  - 输入问题，按 `Ctrl+Enter` 或点击发送按钮
-  - 答案支持 **Markdown**（表格、列表、代码块）和 **LaTeX** 公式（如 `$E=mc^2$`）
 
 ## 技术原理
 
@@ -123,6 +123,11 @@ python -m backend.main
 - **Q：没有 Rerank API Key 怎么办？**  
   A：在 `.env` 中留空 `RERANK_API_KEY`，系统会自动降级为按初始距离排序。
 
+- **Q：为什么没有删除数据库集合的功能？**  
+  A：为数据安全考虑，删除数据库集合需要手动到后台删除。进入到python虚拟环境后（`source venv/bin/activate`）可以在项目根目录下运行下述指令(将your_collection_name替换为你想要删除的集合的名字)，该集合的物理文件和对应元数据都将被永久删除！
+  ```bash
+  python -m scripts.delete_collection your_collection_name
+  ```
 
 ## 许可证
 
