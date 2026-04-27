@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="initial-scale=1.0, maximum-scale=1, minimum-scale=1.0, user-scalable=no, width=device-width, viewport-fit=cover">
-    <title>宁大土环 · 智能知识库</title>
+    <title>土木工程规范智能查询系统</title>
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232c7da0'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
     <link rel="stylesheet" href="style.css">
     <!-- marked for Markdown rendering -->
@@ -76,7 +76,7 @@
         <main class="chat-main">
             <div class="chat-header">
                 <h2>🏗️ 智能助手</h2>
-                <p>基于 RAG 的专业知识问答 —— 规范查询 · 学术支持 · 智能解答</p>
+                <p>土木工程规范智能查询系统</p>
             </div>
             <div class="chat-messages" id="chatMessages">
                 <div class="message bot">
@@ -84,17 +84,24 @@
                     <div class="message-content">
                         您好！我是你的专属智能知识助手！<br>
                         您可以在左侧选择一个知识库集合，即可开始向我提问。<br>
-                        您可以上传多个文本文件(规范、教材等，暂仅支持纯文本文件，如.md和.txt文件)到指定集合。<br>
+                        您可以上传多本规范(暂仅支持纯文本文件，如.md和.txt文件)到指定集合。<br>
                     </div>
                 </div>
             </div>
             <div class="chat-input-area">
+                <div class="adaptive-control">
+                    <label class="switch-label">
+                        <span class="switch-text">自适应检索</span>
+                        <input type="checkbox" id="adaptiveToggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="adaptive-hint">可提升准确率，但会增加推理时间</span>
+                </div>
                 <textarea id="questionInput" rows="2" placeholder="输入您的问题"></textarea>
                 <button id="askBtn" class="btn-primary">发送</button>
             </div>
             <div class="footer-note">
-                提示：支持输入 Ctrl+Enter 快捷发送。回答基于已索引的文档内容生成。
-            </div>
+                提示：支持输入 Ctrl+Enter 快捷发送。    by:宁波大学土环学院土木工程专业 2022级 226002378
         </main>
     </div>
 

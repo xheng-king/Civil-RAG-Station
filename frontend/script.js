@@ -45,6 +45,7 @@ function addMessageToChat(role, content, isMarkdown = false) {
     if (role === 'bot' && isMarkdown) {
         // 1. Markdown 解析
         contentDiv.innerHTML = marked.parse(content);
+        contentDiv.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
         // 2. 渲染 LaTeX 公式
         if (typeof renderMathInElement === 'function') {
             renderMathInElement(contentDiv, {
@@ -218,6 +219,7 @@ async function askQuestion() {
         addMessageToChat('bot', '请先在左侧选择一个集合。', false);
         return;
     }
+    const adaptiveEnabled = document.getElementById('adaptiveToggle').checked; // 获取开关状态
     addMessageToChat('user', question, false);
     questionInput.value = '';
     addLoadingMessage();
@@ -230,7 +232,8 @@ async function askQuestion() {
                 question,
                 collection_name: currentCollection,
                 initial_k: null,
-                final_top_k: null
+                final_top_k: null,
+                adaptive_enabled: adaptiveEnabled
             })
         });
         if (!res.ok) {

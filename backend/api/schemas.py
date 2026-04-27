@@ -61,6 +61,7 @@ class QueryRequest(BaseModel):
     # 可选：动态覆盖检索参数
     initial_k: Optional[int] = Field(None, description="初始召回文档数（覆盖默认值）", ge=1, le=100)
     final_top_k: Optional[int] = Field(None, description="重排序后最终使用的文档数", ge=1, le=20)
+    adaptive_enabled: Optional[bool] = Field(False, description="是否开启自适应检索")
 
 
 class QueryResponse(BaseModel):

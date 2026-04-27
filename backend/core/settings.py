@@ -45,3 +45,5 @@ RERANK_OUTPUT_STEP_SIZE = int(os.getenv("RERANK_OUTPUT_STEP_SIZE", "2"))    # �
 
 # ========== 日志文件路径 ==========
 QUERY_LOG_PATH = os.getenv("QUERY_LOG_PATH", str(BASE_DIR / "query_log.md"))
+
+BASIC_DOCS_DIR = "./data/basicdocs"  # 存放系统自带规范文档的目录

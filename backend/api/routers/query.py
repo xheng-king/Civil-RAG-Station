@@ -25,7 +25,7 @@ async def query_endpoint(
     - **collection_name**: 要查询的向量集合名称（必填）
     - **initial_k**: （可选）覆盖默认的初始召回文档数
     - **final_top_k**: （可选）覆盖默认的重排序后保留文档数
-
+    - **adaptive_enabled**: （可选）是否启用自适应检索
     返回的回答包含 Markdown 格式和纯文本版本，以及处理耗时。
     """
     start_time = time.time()
@@ -47,7 +47,7 @@ async def query_endpoint(
 
     # 3. 执行问答
     try:
-        answer_markdown, metadata = rag.query(request.question)
+        answer, metadata = rag.query(request.question, adaptive_enabled=request.adaptive_enabled)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -58,12 +58,12 @@ async def query_endpoint(
     processing_time_ms = (time.time() - start_time) * 1000
 
     # 5. 提取纯文本（去除 Markdown 标记，简单实现）
-    answer_plain = _strip_markdown(answer_markdown)
+    answer_plain = _strip_markdown(answer)
 
     # 6. 构造响应
     return QueryResponse(
         question=request.question,
-        answer_markdown=answer_markdown,
+        answer_markdown=answer,
         answer_plain=answer_plain,
         contexts_count=metadata.get("num_contexts", 0),
         processing_time_ms=round(processing_time_ms, 2),

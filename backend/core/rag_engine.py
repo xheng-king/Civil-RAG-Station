@@ -48,17 +48,27 @@ class RAGEngine:
         return self.retriever.set_collection(collection_name)
 
     # ---------- 核心问答 ----------
-    def query(self, question: str) -> Tuple[str, Dict[str, Any]]:
+    def query(self, question: str, adaptive_enabled: bool = False) -> Tuple[str, Dict[str, Any]]:
         """
         根据问题生成回答
         :param question: 用户问题
+        :param adaptive_enabled: 是否启用自适应检索（若后端配置允许则生效）
         :return: (answer, metadata)   answer 为 LLM 直接生成的原始回答（可能含 Markdown）
         """
         if self.retriever.collection is None:
             raise ValueError("未设置集合，请先调用 set_collection() 或初始化时指定 collection_name")
 
+        # 根据 adaptive_enabled 决定是否传入评估函数（仅当后端配置了自适应检索时才有意义）
+        evaluator = None
+        if adaptive_enabled:
+            # 简单评估器：判断答案中是否包含暗示失败的关键词
+            def simple_evaluator(answer: str) -> bool:
+                negative_keywords = ["抱歉", "没有找到", "无法回答", "未找到相关", "暂无", "未检索到"]
+                return not any(kw in answer for kw in negative_keywords)
+            evaluator = simple_evaluator
+
         # 调用检索生成器，获得 LLM 答案
-        answer, final_docs, _ = self.retriever.query(question, evaluator_func=None)
+        answer, final_docs, _ = self.retriever.query(question, evaluator_func=evaluator)
 
         # 元数据（可用于日志或调试）
         metadata = {
@@ -66,6 +76,7 @@ class RAGEngine:
             "answer": answer,
             "num_contexts": len(final_docs),
             "collection": self.retriever.collection.name if self.retriever.collection else None,
+            "adaptive_used": adaptive_enabled,
         }
         # 直接返回 answer，不再进行额外包装
         return answer, metadata
