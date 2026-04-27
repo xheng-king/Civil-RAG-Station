@@ -43,7 +43,21 @@ function addMessageToChat(role, content, isMarkdown = false) {
     contentDiv.className = 'message-content';
     
     if (role === 'bot' && isMarkdown) {
+        // 1. Markdown 解析
         contentDiv.innerHTML = marked.parse(content);
+        // 2. 渲染 LaTeX 公式
+        if (typeof renderMathInElement === 'function') {
+            renderMathInElement(contentDiv, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: false
+            });
+        }
+        // 3. 代码高亮
         contentDiv.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
     } else {
         contentDiv.textContent = content;
@@ -128,9 +142,9 @@ async function createCollection() {
 }
 
 async function uploadDocument() {
-    const file = docFileInput.files[0];
-    if (!file) {
-        showStatus(uploadStatusDiv, '请选择文件', 'error');
+    const files = docFileInput.files;
+    if (!files || files.length === 0) {
+        showStatus(uploadStatusDiv, '请选择至少一个文件', 'error');
         return;
     }
     const targetColl = targetCollectionSelect.value;
@@ -144,33 +158,57 @@ async function uploadDocument() {
         showStatus(uploadStatusDiv, '最小块必须小于最大块', 'error');
         return;
     }
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('collection_name', targetColl);
-    formData.append('min_chunk_size', minChunk.toString());
-    formData.append('max_chunk_size', maxChunk.toString());
-    formData.append('record_stats', 'true');
-    
+
     uploadBtn.disabled = true;
     uploadBtn.textContent = '上传中...';
-    showStatus(uploadStatusDiv, '正在索引，请稍候...', 'success');
-    
-    try {
-        const res = await fetch(`${API_BASE}/documents/upload`, { method: 'POST', body: formData });
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || '上传失败');
+    showStatus(uploadStatusDiv, `开始上传 ${files.length} 个文件...`, 'success');
+
+    let successCount = 0;
+    let failCount = 0;
+    const statusLines = [];
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('collection_name', targetColl);
+        formData.append('min_chunk_size', minChunk.toString());
+        formData.append('max_chunk_size', maxChunk.toString());
+        formData.append('record_stats', 'true');
+
+        try {
+            const response = await fetch(`${API_BASE}/documents/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.detail || '上传失败');
+            }
+            const data = await response.json();
+            successCount++;
+            statusLines.push(`✅ ${file.name}: ${data.total_chunks} 个片段`);
+        } catch (err) {
+            failCount++;
+            statusLines.push(`❌ ${file.name}: ${err.message}`);
         }
-        const data = await res.json();
-        showStatus(uploadStatusDiv, `✅ 成功！${data.filename} → ${data.total_chunks} 个片段`, 'success');
-        docFileInput.value = '';
-        await loadCollections();
-    } catch (err) {
-        showStatus(uploadStatusDiv, err.message, 'error');
-    } finally {
-        uploadBtn.disabled = false;
-        uploadBtn.textContent = '上传并索引';
+        // 实时更新状态（可选）
+        showStatus(uploadStatusDiv, `已处理 ${i+1}/${files.length} 个文件...`, 'success');
     }
+
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = '上传并索引';
+    
+    // 完整结果
+    const summary = `上传完成：成功 ${successCount} 个，失败 ${failCount} 个。\n` + statusLines.join('\n');
+    showStatus(uploadStatusDiv, summary, successCount === files.length ? 'success' : 'error');
+    
+    // 如果全部成功，清空文件选择
+    if (failCount === 0) {
+        docFileInput.value = '';
+    }
+    // 刷新集合列表（文档数可能变化）
+    await loadCollections();
 }
 
 async function askQuestion() {

@@ -1,4 +1,3 @@
-# backend/core/rag_engine.py
 import os
 import json
 import math
@@ -23,7 +22,8 @@ _eval_client = OpenAI(base_url=LLM_BASE_URL, api_key=LLM_API_KEY) if LLM_API_KEY
 class RAGEngine:
     """
     线上 RAG 引擎，提供集合管理和问答能力。
-    返回的回答为 Markdown 格式，便于前端渲染。
+    返回的回答为 LLM 直接生成的原始文本（含自然语言中的 Markdown 格式），
+    前端直接渲染，不再额外拼接参考来源。
     """
 
     def __init__(self, collection_name: Optional[str] = None, log_file_path: Optional[str] = None):
@@ -52,16 +52,13 @@ class RAGEngine:
         """
         根据问题生成回答
         :param question: 用户问题
-        :return: (markdown_answer, metadata)
+        :return: (answer, metadata)   answer 为 LLM 直接生成的原始回答（可能含 Markdown）
         """
         if self.retriever.collection is None:
             raise ValueError("未设置集合，请先调用 set_collection() 或初始化时指定 collection_name")
 
-        # 调用检索生成器
+        # 调用检索生成器，获得 LLM 答案
         answer, final_docs, _ = self.retriever.query(question, evaluator_func=None)
-
-        # 构造 markdown 格式的回答
-        markdown_answer = self._format_answer_markdown(question, answer, final_docs)
 
         # 元数据（可用于日志或调试）
         metadata = {
@@ -70,25 +67,8 @@ class RAGEngine:
             "num_contexts": len(final_docs),
             "collection": self.retriever.collection.name if self.retriever.collection else None,
         }
-        return markdown_answer, metadata
-
-    def _format_answer_markdown(self, question: str, answer: str, contexts: List[Dict]) -> str:
-        """
-        将答案和参考上下文格式化为 Markdown
-        """
-        md_lines = []
-        md_lines.append(f"## 问题\n{question}\n")
-        md_lines.append(f"## 回答\n{answer}\n")
-        if contexts:
-            md_lines.append("## 参考来源\n")
-            for idx, ctx in enumerate(contexts, 1):
-                source = ctx.get('metadata', {}).get('source', '未知来源')
-                score = ctx.get('rerank_score', ctx.get('score', 0))
-                md_lines.append(f"**{idx}. {source}** (相关性: {score:.4f})\n")
-                # 可选：截取片段，避免过长
-                content_preview = ctx['content'][:300] + "..." if len(ctx['content']) > 300 else ctx['content']
-                md_lines.append(f"> {content_preview}\n")
-        return "\n".join(md_lines)
+        # 直接返回 answer，不再进行额外包装
+        return answer, metadata
 
     # ---------- 高级参数调整 ----------
     def set_retrieval_params(self, initial_k: Optional[int] = None, final_top_k: Optional[int] = None):
@@ -100,7 +80,6 @@ class RAGEngine:
 
 
 # ========== 以下为评估相关工具函数（复用原逻辑，供线上监控使用） ==========
-
 def calculate_dcg_from_scores(scores: List[float]) -> float:
     """计算 DCG"""
     dcg = 0.0

@@ -11,6 +11,12 @@
     <!-- highlight.js for code blocks -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- KaTeX CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <!-- KaTeX JS -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <!-- 自动渲染扩展 -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 </head>
 <body>
     <div class="app">
@@ -49,7 +55,7 @@
                     <select id="targetCollection"></select>
                 </div>
                 <div class="input-group">
-                    <input type="file" id="docFile" accept=".md,.txt,.markdown">
+                    <input type="file" id="docFile" accept=".md,.txt,.markdown" multiple>
                 </div>
                 <div class="row-2cols">
                     <div>
@@ -69,20 +75,21 @@
         <!-- 主聊天区 -->
         <main class="chat-main">
             <div class="chat-header">
-                <h2>🏗️ 土环智能助手</h2>
+                <h2>🏗️ 智能助手</h2>
                 <p>基于 RAG 的专业知识问答 —— 规范查询 · 学术支持 · 智能解答</p>
             </div>
             <div class="chat-messages" id="chatMessages">
                 <div class="message bot">
                     <div class="message-avatar">📖</div>
                     <div class="message-content">
-                        您好！我是宁波大学土木工程与地理环境学院的智能知识助手。<br>
-                        请先在左侧选择一个知识库集合，然后上传相关文档（规范、教材等），即可开始提问。
+                        您好！我是你的专属智能知识助手！<br>
+                        您可以在左侧选择一个知识库集合，即可开始向我提问。<br>
+                        您可以上传多个文本文件(规范、教材等，暂仅支持纯文本文件，如.md和.txt文件)到指定集合。<br>
                     </div>
                 </div>
             </div>
             <div class="chat-input-area">
-                <textarea id="questionInput" rows="2" placeholder="输入您的问题，例如：抗震设计的基本要求是什么？"></textarea>
+                <textarea id="questionInput" rows="2" placeholder="输入您的问题"></textarea>
                 <button id="askBtn" class="btn-primary">发送</button>
             </div>
             <div class="footer-note">

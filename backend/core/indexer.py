@@ -177,8 +177,8 @@ class QwenIndexer:
         )
         
         # 6. 可选：记录统计信息到 CSV（与原项目保持一致）
-        if record_stats:
-            self._record_chunk_stats(filename, segments)
+        # if record_stats:
+        #     self._record_chunk_stats(filename, segments)
         
         return {
             "success": True,

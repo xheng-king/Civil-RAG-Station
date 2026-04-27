@@ -1,4 +1,3 @@
-# backend/core/retriever_generator.py
 import os
 import chromadb
 from openai import OpenAI
@@ -18,7 +17,6 @@ from backend.core.settings import (
     LLM_API_KEY,
     LLM_BASE_URL,
     LLM_MODEL,
-    # 自适应检索配置（若有需要）
     ENABLE_ADAPTIVE_RETRIEVAL,
     MAX_RETRIEVAL_ROUNDS,
     RETRIEVAL_STEP_SIZE,
@@ -35,7 +33,6 @@ class QwenRetrieverGenerator:
         :param collection_name: 可选，初始绑定的集合名称
         :param log_file_path: 日志文件路径（默认项目根目录下的 query_log.md）
         """
-        # Embedding client
         if not EMBEDDING_API_KEY:
             raise ValueError("settings 中 EMBEDDING_API_KEY 未设置")
         self.embedding_client = OpenAI(
@@ -43,7 +40,6 @@ class QwenRetrieverGenerator:
             base_url=EMBEDDING_BASE_URL
         )
         
-        # LLM client
         if not LLM_API_KEY:
             raise ValueError("settings 中 LLM_API_KEY 未设置")
         self.llm_client = OpenAI(
@@ -53,15 +49,12 @@ class QwenRetrieverGenerator:
         
         self.rerank_api_key = RERANK_API_KEY
         
-        # ChromaDB 客户端
         self.chroma_client = chromadb.PersistentClient(path=VECTORSTORE_PATH)
         self.db_manager = DatabaseManager(persist_directory=VECTORSTORE_PATH)
         
-        # 检索参数
         self.initial_retrieve_k = BASE_INITIAL_RETRIEVE_K
         self.final_top_k = BASE_FINAL_TOP_K
         
-        # 日志路径
         if log_file_path is None:
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             self.log_file_path = os.path.join(base_dir, "query_log.md")
@@ -69,17 +62,11 @@ class QwenRetrieverGenerator:
             self.log_file_path = log_file_path
         os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
         
-        # 当前集合
         self.collection = None
         if collection_name:
             self.set_collection(collection_name)
     
     def set_collection(self, collection_name: str) -> bool:
-        """
-        设置要查询的集合
-        :param collection_name: 集合名称
-        :return: 是否成功
-        """
         try:
             self.collection = self.chroma_client.get_collection(name=collection_name)
             print(f"已选择集合: {collection_name}")
@@ -90,15 +77,12 @@ class QwenRetrieverGenerator:
             return False
     
     def list_collections(self) -> List[str]:
-        """返回所有集合名称列表"""
         return self.db_manager.list_collections()
     
     def get_collection_info(self, collection_name: str) -> Dict[str, Any]:
-        """获取集合信息"""
         return self.db_manager.get_collection_info(collection_name)
     
     def _log_interaction(self, user_input: str, response: str, round_num: int = 1, status: str = "Final"):
-        """记录问答交互到 Markdown 日志"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         markdown_content = f"## {timestamp} - Round {round_num} ({status})\n**Q:** {user_input}\n**A:** {response}\n\n"
         try:
@@ -108,7 +92,6 @@ class QwenRetrieverGenerator:
             print(f"记录日志时出错: {e}")
     
     def embed_query(self, query_text: str) -> List[float]:
-        """将查询文本转换为向量"""
         response = self.embedding_client.embeddings.create(
             model=EMBEDDING_MODEL,
             input=query_text
@@ -116,11 +99,6 @@ class QwenRetrieverGenerator:
         return response.data[0].embedding
     
     def retrieve_documents(self, query_text: str, k: int = None) -> List[Dict[str, Any]]:
-        """
-        检索文档
-        :param query_text: 查询文本
-        :param k: 召回数量，默认使用 self.initial_retrieve_k
-        """
         if self.collection is None:
             raise ValueError("未设置集合，请先调用 set_collection()")
         if k is None:
@@ -150,16 +128,11 @@ class QwenRetrieverGenerator:
         return retrieved_docs
     
     def _rerank_all_documents(self, query: str, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        对所有文档进行重排序并返回带分数的完整列表（不截取）
-        """
         if not documents:
             return []
-        
         if not self.rerank_api_key:
             print("重排序 API Key 未设置，跳过重排序")
             return documents
-        
         try:
             headers = {
                 "Authorization": f"Bearer {self.rerank_api_key}",
@@ -175,7 +148,6 @@ class QwenRetrieverGenerator:
             response = requests.post(RERANK_BASE_URL, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             result = response.json()
-            
             if 'results' in result:
                 reranked_docs = []
                 for rank_data in result['results']:
@@ -190,15 +162,10 @@ class QwenRetrieverGenerator:
                 print(f"重排序 API 响应格式异常: {result}")
         except Exception as e:
             print(f"重排序失败: {e}")
-        
-        # 降级：按初始距离排序
         documents.sort(key=lambda x: x['initial_distance'])
         return documents
     
     def rerank_documents(self, query: str, documents: List[Dict[str, Any]], top_n: int = None) -> List[Dict[str, Any]]:
-        """
-        重排序并返回前 top_n 个文档（供外部调用）
-        """
         if top_n is None:
             top_n = self.final_top_k
         if not documents:
@@ -211,7 +178,6 @@ class QwenRetrieverGenerator:
         return final
     
     def generate_answer(self, query: str, contexts: List[Dict[str, Any]]) -> str:
-        """基于上下文生成答案"""
         if not contexts:
             return "抱歉，没有找到相关文档。"
         
@@ -250,7 +216,6 @@ class QwenRetrieverGenerator:
             return completion.choices[0].message.content.strip()
         except Exception as e:
             print(f"生成答案出错: {e}")
-            # 简化重试
             simple_context = "\n\n".join([doc['content'] for doc in contexts])
             simple_prompt = f"基于以下信息回答问题:\n\n{simple_context}\n\n问题: {query}"
             try:
@@ -264,26 +229,17 @@ class QwenRetrieverGenerator:
                 return "抱歉，生成答案时遇到问题。"
     
     def _execute_single_round(self, user_input: str, initial_k: int, final_top_k: int) -> Tuple[str, List[Dict], List[Dict]]:
-        """单轮检索-重排序-生成"""
         candidate_docs = self.retrieve_documents(user_input, k=initial_k)
         if not candidate_docs:
             return "抱歉，没有找到相关文档。", [], []
-        
         all_reranked = self._rerank_all_documents(user_input, candidate_docs)
         final_docs = all_reranked[:final_top_k]
         for idx, doc in enumerate(final_docs):
             doc['rerank_rank'] = idx + 1
-        
         answer = self.generate_answer(user_input, final_docs)
         return answer, final_docs, candidate_docs
     
     def query(self, user_input: str, evaluator_func: Optional[Callable[[str], bool]] = None) -> Tuple[str, List[Dict], List[Dict]]:
-        """
-        主查询入口
-        :param user_input: 用户问题
-        :param evaluator_func: 评估函数（用于自适应检索，线上可省略）
-        :return: (answer, final_docs_used, candidate_docs)
-        """
         if self.collection is None:
             raise ValueError("未设置集合，请先调用 set_collection()")
         
@@ -291,10 +247,8 @@ class QwenRetrieverGenerator:
             answer, final_docs, candidates = self._execute_single_round(
                 user_input, self.initial_retrieve_k, self.final_top_k
             )
-            self._log_interaction(user_input, answer, round_num=1, status="Standard")
             return answer, final_docs, candidates
         
-        # 自适应重试逻辑
         current_initial_k = self.initial_retrieve_k
         current_final_top_k = self.final_top_k
         last_answer = ""
@@ -310,13 +264,10 @@ class QwenRetrieverGenerator:
             last_candidates = candidates
             
             if evaluator_func(answer):
-                self._log_interaction(user_input, answer, round_num=round_num, status="Success")
                 return answer, final_docs, candidates
             else:
-                self._log_interaction(user_input, answer, round_num=round_num, status="Failed/Retry")
                 if round_num < MAX_RETRIEVAL_ROUNDS:
                     current_initial_k += RETRIEVAL_STEP_SIZE
                     current_final_top_k += RERANK_OUTPUT_STEP_SIZE
         
-        self._log_interaction(user_input, last_answer, round_num=MAX_RETRIEVAL_ROUNDS, status="MaxRetriesReached")
         return last_answer, last_final_docs, last_candidates
