@@ -1,0 +1,35 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 虚拟环境（venv 目录已通过 tree 命令排除，但明确忽略）
+venv/
+env/
+.venv/
+
+# 环境变量文件（包含 API Key）
+.env
+
+# 日志和查询记录
+logs/
+*.log
+query_log.md
+
+# 向量数据库存储（ChromaDB 数据目录）
+data/
+chroma/
+
+# 生成的统计文件（CSV）
+chunk_details.csv
+file_summary.csv
+evaluation_results.csv
+
+# 前端构建产物（虽然本项目无构建，但保留 future 可能）
+node_modules/
+
+# IDE 配置（根据你的编辑器调整）
+.vscode/
+
+# 操作系统临时文件
+.DS_Store
+Thumbs.db

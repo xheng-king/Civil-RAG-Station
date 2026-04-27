@@ -1,0 +1,224 @@
+// API 基础地址（前后端同源）
+const API_BASE = '/api';
+
+// DOM 元素
+const collectionSelect = document.getElementById('collectionSelect');
+const targetCollectionSelect = document.getElementById('targetCollection');
+const currentCollectionSpan = document.getElementById('currentCollectionDisplay');
+const refreshBtn = document.getElementById('refreshCollectionsBtn');
+const createCollectionBtn = document.getElementById('createCollectionBtn');
+const newCollectionNameInput = document.getElementById('newCollectionName');
+const uploadBtn = document.getElementById('uploadBtn');
+const docFileInput = document.getElementById('docFile');
+const minChunkInput = document.getElementById('minChunk');
+const maxChunkInput = document.getElementById('maxChunk');
+const uploadStatusDiv = document.getElementById('uploadStatus');
+const askBtn = document.getElementById('askBtn');
+const questionInput = document.getElementById('questionInput');
+const chatMessagesDiv = document.getElementById('chatMessages');
+
+let currentCollection = '';
+
+// ========== UI 辅助函数 ==========
+function showStatus(element, message, type) {
+    element.textContent = message;
+    element.className = `status-msg ${type}`;
+    if (type === 'success') {
+        setTimeout(() => {
+            if (element === uploadStatusDiv) {
+                element.textContent = '';
+                element.className = 'status-msg';
+            }
+        }, 4000);
+    }
+}
+
+function addMessageToChat(role, content, isMarkdown = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${role}`;
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = role === 'user' ? '👤' : '📖';
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    
+    if (role === 'bot' && isMarkdown) {
+        contentDiv.innerHTML = marked.parse(content);
+        contentDiv.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+    } else {
+        contentDiv.textContent = content;
+    }
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(contentDiv);
+    chatMessagesDiv.appendChild(messageDiv);
+    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+}
+
+function addLoadingMessage() {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'message bot';
+    loadingDiv.id = 'loadingMsg';
+    loadingDiv.innerHTML = `<div class="message-avatar">📖</div><div class="message-content">思考中 <span class="loading-spinner"></span></div>`;
+    chatMessagesDiv.appendChild(loadingDiv);
+    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+}
+
+function removeLoadingMessage() {
+    const loadingMsg = document.getElementById('loadingMsg');
+    if (loadingMsg) loadingMsg.remove();
+}
+
+// ========== API 调用 ==========
+async function loadCollections() {
+    try {
+        const res = await fetch(`${API_BASE}/collections/`);
+        if (!res.ok) throw new Error('加载失败');
+        const collections = await res.json();
+        const options = collections.map(c => `<option value="${c.name}">${c.name} (${c.document_count})</option>`).join('');
+        collectionSelect.innerHTML = options || '<option value="">暂无集合</option>';
+        targetCollectionSelect.innerHTML = options;
+        
+        if (currentCollection && collections.some(c => c.name === currentCollection)) {
+            collectionSelect.value = currentCollection;
+            targetCollectionSelect.value = currentCollection;
+            currentCollectionSpan.textContent = currentCollection;
+        } else if (collections.length) {
+            collectionSelect.value = collections[0].name;
+            targetCollectionSelect.value = collections[0].name;
+            onCollectionChange();
+        } else {
+            currentCollectionSpan.textContent = '未选择';
+        }
+    } catch (err) {
+        console.error(err);
+        collectionSelect.innerHTML = '<option value="">加载失败</option>';
+    }
+}
+
+function onCollectionChange() {
+    currentCollection = collectionSelect.value;
+    currentCollectionSpan.textContent = currentCollection || '未选择';
+    if (targetCollectionSelect) targetCollectionSelect.value = currentCollection;
+}
+
+async function createCollection() {
+    const name = newCollectionNameInput.value.trim();
+    if (!name) {
+        showStatus(uploadStatusDiv, '请输入集合名称', 'error');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/collections/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || '创建失败');
+        }
+        showStatus(uploadStatusDiv, `集合 "${name}" 创建成功`, 'success');
+        newCollectionNameInput.value = '';
+        await loadCollections();
+        collectionSelect.value = name;
+        onCollectionChange();
+    } catch (err) {
+        showStatus(uploadStatusDiv, err.message, 'error');
+    }
+}
+
+async function uploadDocument() {
+    const file = docFileInput.files[0];
+    if (!file) {
+        showStatus(uploadStatusDiv, '请选择文件', 'error');
+        return;
+    }
+    const targetColl = targetCollectionSelect.value;
+    if (!targetColl) {
+        showStatus(uploadStatusDiv, '请选择目标集合', 'error');
+        return;
+    }
+    const minChunk = parseInt(minChunkInput.value, 10);
+    const maxChunk = parseInt(maxChunkInput.value, 10);
+    if (minChunk >= maxChunk) {
+        showStatus(uploadStatusDiv, '最小块必须小于最大块', 'error');
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('collection_name', targetColl);
+    formData.append('min_chunk_size', minChunk.toString());
+    formData.append('max_chunk_size', maxChunk.toString());
+    formData.append('record_stats', 'true');
+    
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = '上传中...';
+    showStatus(uploadStatusDiv, '正在索引，请稍候...', 'success');
+    
+    try {
+        const res = await fetch(`${API_BASE}/documents/upload`, { method: 'POST', body: formData });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || '上传失败');
+        }
+        const data = await res.json();
+        showStatus(uploadStatusDiv, `✅ 成功！${data.filename} → ${data.total_chunks} 个片段`, 'success');
+        docFileInput.value = '';
+        await loadCollections();
+    } catch (err) {
+        showStatus(uploadStatusDiv, err.message, 'error');
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = '上传并索引';
+    }
+}
+
+async function askQuestion() {
+    const question = questionInput.value.trim();
+    if (!question) return;
+    if (!currentCollection) {
+        addMessageToChat('bot', '请先在左侧选择一个集合。', false);
+        return;
+    }
+    addMessageToChat('user', question, false);
+    questionInput.value = '';
+    addLoadingMessage();
+    
+    try {
+        const res = await fetch(`${API_BASE}/query/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question,
+                collection_name: currentCollection,
+                initial_k: null,
+                final_top_k: null
+            })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || '问答失败');
+        }
+        const data = await res.json();
+        removeLoadingMessage();
+        const answerMd = data.answer_markdown || data.answer_plain;
+        const footer = `\n\n---\n⏱️ ${data.processing_time_ms.toFixed(0)} ms | 参考 ${data.contexts_count} 个片段`;
+        addMessageToChat('bot', answerMd + footer, true);
+    } catch (err) {
+        removeLoadingMessage();
+        addMessageToChat('bot', `❌ 错误：${err.message}`, false);
+    }
+}
+
+// ========== 事件绑定 ==========
+collectionSelect.addEventListener('change', onCollectionChange);
+refreshBtn.addEventListener('click', loadCollections);
+createCollectionBtn.addEventListener('click', createCollection);
+uploadBtn.addEventListener('click', uploadDocument);
+askBtn.addEventListener('click', askQuestion);
+questionInput.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') askQuestion();
+});
+
+// 初始化
+loadCollections();

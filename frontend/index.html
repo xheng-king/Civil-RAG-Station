@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1, minimum-scale=1.0, user-scalable=no, width=device-width, viewport-fit=cover">
+    <title>宁大土环 · 智能知识库</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232c7da0'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+    <link rel="stylesheet" href="style.css">
+    <!-- marked for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- highlight.js for code blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon">🏛️</div>
+                <div class="logo-text">
+                    <span class="university">宁波大学</span>
+                    <span class="college">土木工程与地理环境学院</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>📚 知识库管理</h3>
+                <button id="refreshCollectionsBtn" class="btn-outline btn-sm">刷新集合列表</button>
+                <div class="select-wrapper">
+                    <select id="collectionSelect" size="4">
+                        <option value="">-- 加载中 --</option>
+                    </select>
+                </div>
+                <div class="current-collection-badge" id="currentCollectionDisplay">未选择集合</div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>➕ 新建集合</h3>
+                <div class="input-group">
+                    <input type="text" id="newCollectionName" placeholder="例：building_codes" pattern="[A-Za-z0-9._-]{3,512}" title="只能包含字母、数字、下划线、点、连字符，且长度3-512">
+                    <button id="createCollectionBtn" class="btn-primary btn-sm">创建</button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>📄 上传文档</h3>
+                <div class="select-wrapper">
+                    <select id="targetCollection"></select>
+                </div>
+                <div class="input-group">
+                    <input type="file" id="docFile" accept=".md,.txt,.markdown">
+                </div>
+                <div class="row-2cols">
+                    <div>
+                        <label>最小块</label>
+                        <input type="number" id="minChunk" value="512" step="128">
+                    </div>
+                    <div>
+                        <label>最大块</label>
+                        <input type="number" id="maxChunk" value="2048" step="128">
+                    </div>
+                </div>
+                <button id="uploadBtn" class="btn-primary">上传并索引</button>
+                <div id="uploadStatus" class="status-msg"></div>
+            </div>
+        </aside>
+
+        <!-- 主聊天区 -->
+        <main class="chat-main">
+            <div class="chat-header">
+                <h2>🏗️ 土环智能助手</h2>
+                <p>基于 RAG 的专业知识问答 —— 规范查询 · 学术支持 · 智能解答</p>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="message-avatar">📖</div>
+                    <div class="message-content">
+                        您好！我是宁波大学土木工程与地理环境学院的智能知识助手。<br>
+                        请先在左侧选择一个知识库集合，然后上传相关文档（规范、教材等），即可开始提问。
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <textarea id="questionInput" rows="2" placeholder="输入您的问题，例如：抗震设计的基本要求是什么？"></textarea>
+                <button id="askBtn" class="btn-primary">发送</button>
+            </div>
+            <div class="footer-note">
+                提示：支持输入 Ctrl+Enter 快捷发送。回答基于已索引的文档内容生成。
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
