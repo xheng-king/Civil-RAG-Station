@@ -16,9 +16,7 @@ logs/
 query_log.md
 
 # 向量数据库存储（ChromaDB 数据目录）
-vectorstore/
-data/
-!data/basicdoc
+data/vectorstore
 
 # 生成的统计文件（CSV）
 chunk_details.csv
