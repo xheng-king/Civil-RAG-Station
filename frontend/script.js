@@ -43,10 +43,22 @@ function addMessageToChat(role, content, isMarkdown = false) {
     contentDiv.className = 'message-content';
     
     if (role === 'bot' && isMarkdown) {
-        // 1. Markdown 解析
-        contentDiv.innerHTML = marked.parse(content);
-        contentDiv.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-        // 2. 渲染 LaTeX 公式
+        // 预处理：将 \\[ ... \\] 转换为 $$ ... $$，\\( ... \\) 转换为 $ ... $
+        let processedContent = content;
+        // 匹配 \\[ ... \\] （非贪婪，支持多行）
+        processedContent = processedContent.replace(/\\\[(.*?)\\\]/gs, (match, p1) => {
+            return `$$ ${p1} $$`;
+        });
+        // 匹配 \\( ... \\)
+        processedContent = processedContent.replace(/\\\((.*?)\\\)/gs, (match, p1) => {
+            return `$ ${p1} $`;
+        });
+        
+        // 使用 marked 解析 Markdown
+        let html = marked.parse(processedContent);
+        contentDiv.innerHTML = html;
+        
+        // 渲染 KaTeX 公式
         if (typeof renderMathInElement === 'function') {
             renderMathInElement(contentDiv, {
                 delimiters: [
@@ -58,11 +70,13 @@ function addMessageToChat(role, content, isMarkdown = false) {
                 throwOnError: false
             });
         }
-        // 3. 代码高亮
+        
+        // 代码高亮
         contentDiv.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
     } else {
         contentDiv.textContent = content;
     }
+    
     messageDiv.appendChild(avatar);
     messageDiv.appendChild(contentDiv);
     chatMessagesDiv.appendChild(messageDiv);
@@ -84,6 +98,28 @@ function removeLoadingMessage() {
 }
 
 // ========== API 调用 ==========
+function preprocessLatexInMarkdown(text) {
+    // 匹配不在代码块内的成对方括号，且内部包含 LaTeX 命令字符（如 \frac, \text, \sum, \int 等）
+    // 简单正则：匹配 [ 内容 ]，内容中不包含方括号（不支持嵌套），且包含反斜杠加字母（LaTeX命令）
+    // 为了防止破坏普通文本中的方括号，只替换明显是公式的块
+    // 更安全的做法：将形如 "[ \\text{...} = ... ]" 的替换为 "$$ \\text{...} = ... $$"
+    // 注意：原文本中可能已经有 $$ 或 \[\]，不要重复替换
+    
+    // 暂不处理代码块内的内容（简化起见，完整实现需要跳过 ``` 代码块）
+    // 匹配 [ ... ] 其中 ... 不包含 [ ] 但包含反斜杠字母组合
+    // 注意：这里使用非贪婪匹配，且要求开头的 [ 前面不是反斜杠（避免已转义）
+    const regex = /(?<!\\)\[((?:[^\[\]]|\\[\[\]])+?)\](?!\\)/g;
+    return text.replace(regex, (match, content) => {
+        // 如果内容中包含 LaTeX 命令特征（例如 \text, \frac, \sum 等），则认为是公式
+        if (/\\[a-zA-Z]+/.test(content)) {
+            // 转换为块级公式 $$
+            return `$$ ${content} $$`;
+        }
+        // 否则保持原样
+        return match;
+    });
+}
+
 async function loadCollections() {
     try {
         const res = await fetch(`${API_BASE}/collections/`);
