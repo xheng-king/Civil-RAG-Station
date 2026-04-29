@@ -2,6 +2,9 @@
 
 基于 **RAG**（检索增强生成）的本地知识库问答系统，支持上传规范文档（.md/.txt），自动分块、向量化并存入 ChromaDB，通过大模型（Qwen）提供智能问答。前端提供友好的 Web 界面，支持 **Markdown** 与 **LaTeX** 渲染。
 
+界面展示：  
+<img width="75%" alt="钢结构问题1" src="https://github.com/user-attachments/assets/98cffc92-5b25-42ab-8781-5d05cb56f6f8" />
+
 ## 快速开始
 
 ### 1. 克隆代码并创建虚拟环境
