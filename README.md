@@ -11,7 +11,7 @@
 
 ```bash
 git clone https://github.com/xheng-king/Civil-RAG-Station.git
-cd rag_ce_online
+cd Civil-RAG-Station
 python -m venv venv
 source venv/bin/activate        # Linux/Mac
 # .\venv\Scripts\activate       # Windows
