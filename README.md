@@ -10,7 +10,7 @@
 ### 1. 克隆代码并创建虚拟环境
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/xheng-king/Civil-RAG-Station.git
 cd rag_ce_online
 python -m venv venv
 source venv/bin/activate        # Linux/Mac
